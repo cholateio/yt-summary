@@ -17,6 +17,7 @@
 | D4 | vault 整合 | 跑完把 `article_final.md` 複製到 `vault/raw/`,由既有 nightly ingest 蒸餾進 wiki | 零新增整合邏輯,完全尊重 vault 治理(raw 只進不改、wiki 存沉澱知識) |
 | D5 | LLM 呼叫 | headless `claude -p`(Claude Code 訂閱內),不走 Anthropic API | 零邊際成本;與 vault ingest.sh 同模式。翻盤條件:若 JSON 可靠度或 rate limit 成為實測瓶頸,改走 API(structured outputs) |
 | D6 | v1 範圍 | Phase 1(M1 字幕路徑、M2 規則法、M3、M5、M6、M8)+ quick 模式 + vault 輸出 | 先端對端跑通、用真影片驗證留存率,再決定 M7 怎麼調 |
+| D7 | 終止與移除 | 終止 = Ctrl+C(前景 CLI);vault 匯出為最後一步且原子寫入;`remove` 子指令半自動化事後移除 | 中斷絕不污染 vault;反悔成本壓到一行指令 |
 
 **v1 不做**(依 spec Phase 2–4):M7 驗證回合、LLM 標點修復、Whisper fallback、
 M4 畫格擷取、Type C 視覺輸入、M6b 系列 synthesis、自動分類 type、失敗續跑。
@@ -24,6 +25,9 @@ M4 畫格擷取、Type C 視覺輸入、M6b 系列 synthesis、自動分類 type
 ---
 
 ## 2. 架構
+
+CLI 有兩個子指令:`yt-summary <URL> --type A|B|C [...]`(主流程,下圖)與
+`yt-summary remove <url|video_id>`(事後移除,見 §6.1)。
 
 ```
 yt-summary <URL> --type A|B|C [--mode auto|full|quick] [--no-vault]
@@ -57,7 +61,7 @@ yt-summary/
 ├── pyproject.toml          # uv 管理;依賴:yt-dlp、pyyaml
 ├── config.yaml             # spec §9 + 本文件 §7 的擴充
 ├── src/yt_summary/
-│   ├── cli.py              # 進入點:參數解析、mode 判斷、pipeline 編排
+│   ├── cli.py              # 進入點:子指令(主流程/remove)、mode 判斷、pipeline 編排
 │   ├── m1_fetch.py         # yt-dlp subprocess:metadata + 字幕下載
 │   ├── m2_clean.py         # 去重、斷句 → transcript.json
 │   ├── m3_segment.py       # 章節/token 窗切分 → segments.json
@@ -65,7 +69,7 @@ yt-summary/
 │   ├── m6_reduce.py        # reduce:筆記 → article_final.md
 │   ├── quick.py            # 短片單次呼叫路徑
 │   ├── m8_output.py        # 產物落地、run.log 彙總
-│   ├── vault.py            # 匯出 vault/raw/
+│   ├── vault.py            # 匯出 vault/raw/(原子寫入)+ remove 邏輯
 │   ├── llm.py              # claude -p wrapper(subprocess、JSON 修復重試、usage 記錄)
 │   ├── prompts.py          # 全部 prompt 模板,type 特化集中管理
 │   └── tokens.py           # 啟發式 token 估算
@@ -104,7 +108,27 @@ yt-summary/
   覆蓋自己先前那份——「raw 只進不改」是對 vault 整理助手的規則,不約束產生器更新自己的產物)。
 - 檔頭 metadata 區塊(嵌在文章 markdown 開頭):來源 URL、頻道、影片時長、type、
   產生日期——nightly ingest 依此填筆記的 `source` 欄位並判斷是否已攝入。
+- **原子寫入**:先寫入同目錄暫存檔(`.tmp-` 前綴)再 `os.replace()` 到最終檔名。
+  即使匯出瞬間撞上凌晨 ingest 掃描,ingest 也只會看到完整檔或沒有檔。
 - 失敗處理:vault 目錄不可寫(如 Windows 磁碟未掛載)→ 警告並跳過,不影響 pipeline 主產物。
+
+### 6.1 終止與移除
+
+**執行中終止**:Ctrl+C(SIGINT 打到整個 process group,yt-dlp / claude -p 子行程
+一併終止)。設計保證:vault 匯出是 pipeline 最後一步——中斷只會在 `output/{video_id}/`
+留下中間產物(保留供 debug,重跑覆蓋),vault 不會有任何殘留。
+
+**事後移除 `yt-summary remove <url|video_id>`**:
+
+1. 刪 `output/{video_id}/`。
+2. 刪 `vault/raw/yt-*-{video_id}.md`(檔名含 video_id 即為此設計)。
+3. grep `vault/wiki/` 各筆記的 `source:` 欄位比對影片 URL,偵測是否已被 nightly
+   ingest 蒸餾:
+   - 未攝入(ingest 前的反悔窗,最長約 24h)→ 回報「已完全移除」。
+   - 已攝入 → **只列出受影響的筆記清單**,不動 wiki——wiki 的移除屬 vault 治理
+     (其 CLAUDE.md §6:預設標 deprecated、物理刪除需明確指示並修復斷鏈),
+     由使用者在 vault 的 claude session 處理;若該晚 ingest 只含此篇,
+     也可直接 `git revert` 該筆自動 ingest commit。
 
 ## 7. config.yaml 擴充(相對 spec §9)
 
@@ -141,6 +165,7 @@ vault:
 
 - 單元測試(`pytest -q`,不需網路):M2 滾動字幕去重、M2 斷句、M3 章節/token 窗切分
   邊界(句尾對齊、小章節合併、overlap)、tokens.py 估算、vault 檔名 slug、
+  vault 原子寫入與 remove(tmp 目錄模擬 raw/wiki:未攝入完全移除、已攝入列清單)、
   llm.py 的 JSON 修復流程(mock subprocess)。
 - 煙霧測試(需網路 + claude 訂閱,手動跑):一支 <15min 影片走 quick、
   一支 30–40min Type A/B 影片走 full,端對端產出 article_final.md 並落 vault/raw。
