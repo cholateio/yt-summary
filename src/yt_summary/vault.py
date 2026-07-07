@@ -31,6 +31,12 @@ def _header(transcript: dict, type_code: str, generated: dt.date) -> str:
 def export_article(article_md: str, transcript: dict, raw_dir: Path,
                    type_code: str, today: dt.date | None = None) -> Path:
     raw_dir = Path(raw_dir)
+
+    # 清掃上次崩潰留下的暫存孤兒:write_text 與 os.replace 之間若中斷,
+    # .tmp-* 會殘留,且可能被 ingest 的 *.md glob 誤撿——落地前先掃乾淨。
+    for orphan in raw_dir.glob(".tmp-*"):
+        orphan.unlink()
+
     generated = today or dt.date.today()
     vid = transcript["video_id"]
     name = f"yt-{generated.strftime('%Y%m%d')}-{slugify(transcript['title'])}-{vid}.md"

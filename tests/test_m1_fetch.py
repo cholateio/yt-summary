@@ -67,3 +67,23 @@ def test_download_subtitle_missing_file_raises(tmp_path):
     run = _run_factory([(0, "", "")])
     with pytest.raises(FetchError, match="未找到"):
         download_subtitle("u", "zh-TW", "manual_subs", tmp_path, run=run)
+
+
+def test_download_subtitle_ignores_stale_other_language(tmp_path):
+    # workdir 跨重跑持久化:先前一次留下的 en 舊檔不該被本次 zh-TW 撿走。
+    stale = tmp_path / "abcdefghijk.en.json3"
+    stale.write_text("{}", encoding="utf-8")
+    fresh = tmp_path / "abcdefghijk.zh-TW.json3"
+
+    def run(cmd, input=None, capture_output=None, text=None, timeout=None):
+        fresh.write_text("{}", encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    path = download_subtitle("u", "zh-TW", "manual_subs", tmp_path, run=run)
+    assert path == fresh
+
+
+def test_fetch_meta_empty_stdout_raises():
+    run = _run_factory([(0, "", "")])
+    with pytest.raises(FetchError, match="未回傳"):
+        fetch_meta("https://youtu.be/x", run=run)

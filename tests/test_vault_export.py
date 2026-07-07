@@ -39,3 +39,12 @@ def test_export_overwrites_stale_same_video(tmp_path):
     assert not old.exists()          # 同 video_id 舊檔被清掉(重跑覆蓋語意)
     assert p.exists()
     assert len(list(tmp_path.glob("yt-*-abcdefghijk.md"))) == 1
+
+
+def test_export_sweeps_orphan_tmp_files(tmp_path):
+    orphan = tmp_path / ".tmp-yt-old-orphan.md"
+    orphan.write_text("孤兒", encoding="utf-8")
+    p = export_article("# 新", TRANSCRIPT, tmp_path, "A", today=TODAY)
+    assert not orphan.exists()
+    assert not list(tmp_path.glob(".tmp-*"))
+    assert p.exists()

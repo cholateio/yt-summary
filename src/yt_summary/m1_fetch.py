@@ -19,7 +19,10 @@ def fetch_meta(url: str, run=subprocess.run) -> dict:
     )
     if proc.returncode != 0:
         raise FetchError(f"yt-dlp metadata 失敗:{(proc.stderr or '')[-500:]}")
-    first_line = proc.stdout.strip().splitlines()[0]
+    stdout = proc.stdout.strip()
+    if not stdout:
+        raise FetchError("yt-dlp 未回傳 metadata")
+    first_line = stdout.splitlines()[0]
     return json.loads(first_line)
 
 
@@ -46,7 +49,9 @@ def download_subtitle(url: str, lang: str, source: str, workdir: Path,
     )
     if proc.returncode != 0:
         raise FetchError(f"yt-dlp 字幕下載失敗:{(proc.stderr or '')[-500:]}")
-    candidates = sorted(Path(workdir).glob("*.json3"))
+    # 只找本次要求語言的檔案:workdir 跨重跑持久化,不鎖語言的話 glob 可能
+    # 撿到之前其他語言留下的舊檔(字母序早於本次新檔)。
+    candidates = sorted(Path(workdir).glob(f"*.{lang}.json3"))
     if not candidates:
         raise FetchError("字幕檔下載後未找到(.json3)")
     return candidates[0]
