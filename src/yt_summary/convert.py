@@ -18,8 +18,9 @@ import opencc
 
 _cc: opencc.OpenCC | None = None
 
-# inline code(`...`)——單行內要原樣保留。
-_INLINE = re.compile(r"`[^`\n]*`")
+# inline code——單行內要原樣保留。開閉為等長的 backtick run(`code`、``co`de``…),
+# 支援 CommonMark 的多-backtick span(內容本身含單 backtick 時用雙 backtick 包)。
+_INLINE = re.compile(r"(`+)(?:.+?)\1")
 # fenced code:開 fence 3+ 個 ` 或 ~(可帶 info string);閉 fence 同字元、長度 >=、且不帶 info。
 _FENCE_OPEN = re.compile(r"^\s*(`{3,}|~{3,})")
 _FENCE_CLOSE = re.compile(r"^\s*(`{3,}|~{3,})[ \t]*$")

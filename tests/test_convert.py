@@ -58,6 +58,14 @@ def test_markdown_preserves_inline_code():
     assert "這個" in out                       # code 外:这个→這個
 
 
+def test_markdown_preserves_multi_backtick_inline():
+    # 雙 backtick inline(內容含單 backtick 時的 CommonMark 用法)
+    md = "看 ``数据`库`` 这个"
+    out = to_traditional_markdown(md)
+    assert "``数据`库``" in out                  # 雙-backtick span 內原樣
+    assert "這個" in out                          # span 外轉繁
+
+
 def test_markdown_empty():
     assert to_traditional_markdown("") == ""
     assert to_traditional_markdown(None) is None
