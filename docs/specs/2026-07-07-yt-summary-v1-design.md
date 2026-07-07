@@ -98,7 +98,8 @@ yt-summary/
 - **M5 模型檔位**:sonnet(spec 建議「中階」);**M6 / quick**:opus(文章品質關鍵)。
 - **quick super prompt 要素**:角色(逐字稿分析員+文章作者一體)、完整逐字稿(帶時間戳)、
   metadata、type 特化規則(同 M5 的 B/C 條款)、輸出格式 = 與 M6 相同的文章結構
-  (TL;DR 5–8 條 → 主題重組正文,每個主要論點附 `[mm:ss]` → 附錄依 type)、
+  (TL;DR **3–6 條**——短片內容量較小,刻意低於 M6 的 5–8 → 主題重組正文,
+  每個主要論點附 `[mm:ss]` → 附錄依 type)、
   明確禁止省略次要論點。輸出直接是 markdown 文章(非 JSON)。
 - **token 估算(tokens.py)**:`CJK 字元數 × 1.0 + 非 CJK 詞數 × 1.3`,
   spec 允許 ±10% 誤差;不引入 tokenizer 依賴。
