@@ -18,6 +18,11 @@ _APPENDIX_RULES = {
 _ASR_NOTE = ("本字幕由 ASR 自動產生,可能有錯字:遇疑似錯字依上下文合理推斷,"
              "並將該論點標 confidence: \"low\"。")
 
+# 最終文章語言硬規則(M6 / quick 用):字幕常為簡體,產出必須是繁體 zh-TW。
+_ZH_TW_RULE = ("輸出語言:整篇文章一律繁體中文(台灣用語)。原文即使是簡體,"
+               "也必須逐字轉為繁體——這是硬性要求,不可殘留簡體字。"
+               "例外:程式碼、英文、數字、專有代號保留原樣,不做繁簡轉換。")
+
 _NOTE_SCHEMA = """{
   "segment_id": %d,
   "time_range": [%s, %s],
@@ -76,7 +81,8 @@ def m5_prompt(segment: dict, transcript: dict, type_code: str) -> str:
 2. 不得省略「看似次要」的論點;不確定的內容標 confidence: "low" 而不是丟棄。
 3. 每個論點附時間戳(秒數,浮點數)與一句逐字稿原文依據(evidence_quote)。
 4. 講者明示的重點(「這個很重要」「記下來」)收進 speaker_emphasis。
-{asr}{TYPE_RULES[type_code]}
+{asr}- 語言:topic / claim / context / speaker_emphasis 等你自己的敘述文字一律用繁體中文(台灣用語);但 evidence_quote、facts_numbers 的 value、code_blocks 的 code 必須保留逐字稿原文(可能是簡體),不做繁簡轉換。
+{TYPE_RULES[type_code]}
 
 ## 輸出格式
 只輸出一個合法 JSON 物件,不要任何其他文字。schema(含本段固定值):
@@ -117,7 +123,9 @@ def _failed_note(failed_segment_ids: list[int]) -> str:
 def m6_prompt(blocks: list[str], transcript: dict, type_code: str,
               failed_segment_ids: list[int]) -> str:
     joined = "\n\n---\n\n".join(blocks)
-    return f"""你是技術寫作者。以下是一支影片各段落的詳細筆記,請整合成一篇結構完整的 zh-TW 文章。
+    return f"""你是技術寫作者。以下是一支影片各段落的詳細筆記,請整合成一篇結構完整的繁體中文文章。
+
+**{_ZH_TW_RULE}**
 
 ## 影片資訊
 {_meta_block(transcript)}
@@ -150,7 +158,9 @@ def m6_mid_prompt(blocks: list[str], transcript: dict, type_code: str) -> str:
 
 def quick_prompt(transcript: dict, type_code: str) -> str:
     asr = f"\n4. {_ASR_NOTE}" if transcript.get("source") == "auto_subs" else ""
-    return f"""你是逐字稿分析員兼技術寫作者。以下是一支短影片的完整逐字稿,請直接產出一篇 zh-TW「重點文章」。
+    return f"""你是逐字稿分析員兼技術寫作者。以下是一支短影片的完整逐字稿,請直接產出一篇繁體中文「重點文章」。
+
+**{_ZH_TW_RULE}**
 
 ## 影片資訊
 {_meta_block(transcript)}

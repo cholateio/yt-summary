@@ -37,6 +37,8 @@ def test_m5_prompt_contains_essentials():
     assert '"segment_id": 2' in p              # schema 綁定段落 id
     assert "ASR" in p                          # auto_subs → 錯字推斷註記
     assert "confidence" in p
+    assert "繁體中文" in p                       # 敘述文字轉繁
+    assert "evidence_quote" in p and "保留逐字稿原文" in p  # 引文保留原文
 
 
 def test_m5_prompt_type_a_no_number_rule():
@@ -63,6 +65,7 @@ def test_m6_prompt():
     assert "區塊一" in p and "區塊二" in p
     assert "第 3 段" in p          # 缺段警告
     assert "[mm:ss]" in p or "時間戳" in p
+    assert "必須逐字轉為繁體" in p   # 簡轉繁硬規則
 
 
 def test_quick_prompt():
@@ -71,3 +74,4 @@ def test_quick_prompt():
     assert "[0:00]" in p
     assert "程式碼" in p               # Type C 規則
     assert "TL;DR" in p
+    assert "必須逐字轉為繁體" in p       # 簡轉繁硬規則
