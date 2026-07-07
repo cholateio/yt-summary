@@ -18,9 +18,15 @@
 | D5 | LLM 呼叫 | headless `claude -p`(Claude Code 訂閱內),不走 Anthropic API | 零邊際成本;與 vault ingest.sh 同模式。翻盤條件:若 JSON 可靠度或 rate limit 成為實測瓶頸,改走 API(structured outputs) |
 | D6 | v1 範圍 | Phase 1(M1 字幕路徑、M2 規則法、M3、M5、M6、M8)+ quick 模式 + vault 輸出 | 先端對端跑通、用真影片驗證留存率,再決定 M7 怎麼調 |
 | D7 | 終止與移除 | 終止 = Ctrl+C(前景 CLI);vault 匯出為最後一步且原子寫入;`remove` 子指令半自動化事後移除 | 中斷絕不污染 vault;反悔成本壓到一行指令 |
+| D8 | 簡→繁確定性轉換 | 加 `opencc`(s2twp),在 cli 對正文、在 vault 對標題/表頭跑查表轉換;vault 表頭不再自印標題(避免與正文標題重複) | 真實測試發現字幕為簡體時 full 模式整篇簡體、quick 僥倖轉繁——靠 LLM 保證繁體是非確定性的。opencc 查表 100% 穩定,prompt 的繁體指示退為雙保險。放寬「只用 yt-dlp+pyyaml」依賴限制,已獲 user 同意 |
 
 **v1 不做**(依 spec Phase 2–4):M7 驗證回合、LLM 標點修復、Whisper fallback、
 M4 畫格擷取、Type C 視覺輸入、M6b 系列 synthesis、自動分類 type、失敗續跑。
+
+**語言支援(實測記錄,2026-07-07)**:字幕語言優先序 `[zh-TW, zh-Hant, zh, en]`。
+- 中文影片:字幕常為簡體,經 opencc(D8)輸出繁體 zh-TW。
+- 英文影片:`en` 會被選中,輸出仍是繁體中文摘要(英文專有名詞保留;opencc 對英文 no-op)。小限制:M2 斷句的句末標點集不含半形 `.`,英文只靠停頓/長度斷句,邊界較粗。
+- 日文影片:`ja` 不在優先序,純日文字幕會在 M1 `FetchError` 中止(乾淨失敗,不產爛物)。**這也是 opencc 的安全前提——日文進不到轉換層;若未來加 `ja` 支援,opencc 必須加來源語言防護(s2twp 會誤轉部分日文漢字)。**
 
 ---
 

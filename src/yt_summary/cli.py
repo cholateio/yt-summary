@@ -6,7 +6,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import m1_fetch, m2_clean, m3_segment, m5_notes, m6_reduce, quick, vault
+from . import convert, m1_fetch, m2_clean, m3_segment, m5_notes, m6_reduce, quick, vault
 from .config import load_config
 from .llm import LLMError
 from .m8_output import RunLog, write_outputs
@@ -82,6 +82,10 @@ def cmd_run(args) -> int:
         article, m6_calls = m6_reduce.reduce_notes(
             notes, transcript, args.type_code, cfg.llm_models["m6"])
         runlog.add_llm("M6 整合", time.monotonic() - t, m6_calls)
+
+    t = time.monotonic()
+    article = convert.to_traditional(article)   # 確定性簡→繁,保證 zh-TW
+    runlog.add("簡繁轉換", time.monotonic() - t)
 
     write_outputs(outdir, transcript=transcript, segments=segments,
                   notes=notes, article=article, runlog=runlog)

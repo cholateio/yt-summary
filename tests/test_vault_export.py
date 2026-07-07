@@ -32,6 +32,27 @@ def test_export_writes_atomic_file(tmp_path):
     assert not list(tmp_path.glob(".tmp-*"))  # 暫存檔已 rename 掉
 
 
+def test_export_filename_converts_simplified_title(tmp_path):
+    t = {**TRANSCRIPT, "title": "我换了思路:数据库优化"}
+    p = export_article("# 內文", t, tmp_path, "A", today=TODAY)
+    assert "换" not in p.name and "数" not in p.name and "优" not in p.name  # 簡體不進檔名
+    assert "換" in p.name and "資料庫最佳化" in p.name                        # 已轉繁台灣用語
+
+
+def test_export_header_has_no_duplicate_title(tmp_path):
+    p = export_article("# 文章標題\n內文", TRANSCRIPT, tmp_path, "A", today=TODAY)
+    content = p.read_text(encoding="utf-8")
+    header_part = content.split("---")[0]      # 表頭區(--- 之前)
+    assert "#" not in header_part               # 表頭不再自印標題
+    assert content.count("# 文章標題") == 1      # 只有文章本文那一個標題
+
+
+def test_export_header_channel_converted_to_traditional(tmp_path):
+    t = {**TRANSCRIPT, "uploader": "数字黑魔法"}
+    content = export_article("# x", t, tmp_path, "A", today=TODAY).read_text(encoding="utf-8")
+    assert "数字黑魔法" not in content and "數字黑魔法" in content   # 表頭頻道名也轉繁
+
+
 def test_export_overwrites_stale_same_video(tmp_path):
     old = tmp_path / "yt-20260101-舊標題-abcdefghijk.md"
     old.write_text("舊", encoding="utf-8")

@@ -8,6 +8,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from .convert import to_traditional
 from .prompts import ts
 
 _HOSTILE = re.compile(r'[\\/:*?"<>|#\[\]{}\s]+')
@@ -19,13 +20,15 @@ def slugify(title: str, max_len: int = 40) -> str:
 
 
 def _header(transcript: dict, type_code: str, generated: dt.date) -> str:
-    return (
-        f"# {transcript['title']}\n\n"
+    # 不放 # 標題:文章本文已有自己的(繁體)標題,再印一個會重複、且會是 metadata
+    # 的簡體原文。來源 URL 保留——vault ingest 靠它填 source 欄。整段轉繁(URL 不受影響)。
+    header = (
         f"> 來源:{transcript['webpage_url']}\n"
         f"> 頻道:{transcript.get('uploader', '')}|時長:{ts(transcript['duration_sec'])}"
         f"|type {type_code}\n"
         f"> 由 yt-summary 產生於 {generated.isoformat()}\n\n---\n\n"
     )
+    return to_traditional(header)
 
 
 def export_article(article_md: str, transcript: dict, raw_dir: Path,
@@ -39,7 +42,7 @@ def export_article(article_md: str, transcript: dict, raw_dir: Path,
 
     generated = today or dt.date.today()
     vid = transcript["video_id"]
-    name = f"yt-{generated.strftime('%Y%m%d')}-{slugify(transcript['title'])}-{vid}.md"
+    name = f"yt-{generated.strftime('%Y%m%d')}-{slugify(to_traditional(transcript['title']))}-{vid}.md"
 
     content = _header(transcript, type_code, generated) + article_md
     tmp = raw_dir / f".tmp-{name}"
