@@ -12,16 +12,36 @@ zh-TW/zh-Hant/zh/en 字幕(見 m1_fetch.DEFAULT_LANG_PRIORITY),送到這裡的�
 """
 from __future__ import annotations
 
+import re
+
 import opencc
 
 _cc: opencc.OpenCC | None = None
 
+# fenced code block(```...```)或 inline code(`...`)——這些區塊要原樣保留,
+# 不做繁簡轉換(程式碼、字串、指令可能含簡體字面值,轉了就改壞原始碼)。
+_CODE = re.compile(r"```.*?```|`[^`]*`", re.S)
+
 
 def to_traditional(text: str) -> str:
-    """簡體(或已繁/英文)→ 繁體台灣用語;空值原樣返回。"""
+    """簡體(或已繁/英文)→ 繁體台灣用語;空值原樣返回。純文字用(標題/表頭)。"""
     if not text:
         return text
     global _cc
     if _cc is None:
         _cc = opencc.OpenCC("s2twp")
     return _cc.convert(text)
+
+
+def to_traditional_markdown(md: str) -> str:
+    """對 markdown 轉繁,但保留 code 區塊原樣(D8:程式碼原樣保留)。"""
+    if not md:
+        return md
+    out: list[str] = []
+    last = 0
+    for m in _CODE.finditer(md):
+        out.append(to_traditional(md[last:m.start()]))  # code 外:轉繁
+        out.append(m.group(0))                          # code 內:原樣
+        last = m.end()
+    out.append(to_traditional(md[last:]))
+    return "".join(out)

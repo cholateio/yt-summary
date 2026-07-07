@@ -84,7 +84,7 @@ def cmd_run(args) -> int:
         runlog.add_llm("M6 整合", time.monotonic() - t, m6_calls)
 
     t = time.monotonic()
-    article = convert.to_traditional(article)   # 確定性簡→繁,保證 zh-TW
+    article = convert.to_traditional_markdown(article)  # 確定性簡→繁,但保留 code 區塊
     runlog.add("簡繁轉換", time.monotonic() - t)
 
     write_outputs(outdir, transcript=transcript, segments=segments,
