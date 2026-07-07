@@ -28,6 +28,14 @@ def test_markdown_preserves_fenced_code():
     assert "結尾" in out                       # code 後:结尾→結尾
 
 
+def test_markdown_preserves_tilde_fenced_code():
+    md = "正文数据\n~~~python\nx = \"数据库\"  # 优化\n~~~\n结尾"
+    out = to_traditional_markdown(md)
+    assert "正文資料" in out                    # code 外轉繁
+    assert 'x = "数据库"  # 优化' in out         # tilde fence 內原樣保留
+    assert "結尾" in out
+
+
 def test_markdown_preserves_inline_code():
     md = "用 `数据库连接` 这个变量"
     out = to_traditional_markdown(md)

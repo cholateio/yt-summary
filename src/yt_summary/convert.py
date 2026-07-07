@@ -18,9 +18,9 @@ import opencc
 
 _cc: opencc.OpenCC | None = None
 
-# fenced code block(```...```)或 inline code(`...`)——這些區塊要原樣保留,
-# 不做繁簡轉換(程式碼、字串、指令可能含簡體字面值,轉了就改壞原始碼)。
-_CODE = re.compile(r"```.*?```|`[^`]*`", re.S)
+# fenced code block(```...``` 或 ~~~...~~~,皆為合法 Markdown)或 inline code(`...`)
+# ——這些區塊要原樣保留,不做繁簡轉換(程式碼/字串/指令可能含簡體字面值,轉了就改壞)。
+_CODE = re.compile(r"```.*?```|~~~.*?~~~|`[^`]*`", re.S)
 
 
 def to_traditional(text: str) -> str:
