@@ -36,6 +36,21 @@ def test_markdown_preserves_tilde_fenced_code():
     assert "結尾" in out
 
 
+def test_markdown_preserves_long_fence_with_nested_backticks():
+    # 4 個 backtick 的外層 fence,內含 3-backtick(展示巢狀 markdown 用法)
+    md = '说明\n````markdown\n```python\nx = "数据库"\n```\n````\n结论'
+    out = to_traditional_markdown(md)
+    assert "說明" in out and "結論" in out          # code 外轉繁
+    assert '```python\nx = "数据库"\n```' in out     # 4-fence 內全部原樣(含內層 3-fence 與簡體)
+
+
+def test_markdown_close_fence_needs_matching_length():
+    # 4-backtick 開,3-backtick 不能閉合它(長度不足)→ 內容仍在 code 內
+    md = '````\n数据 A\n```\n数据 B\n````\nend'
+    out = to_traditional_markdown(md)
+    assert "数据 A" in out and "数据 B" in out       # 兩行都在 4-fence 內,原樣簡體
+
+
 def test_markdown_preserves_inline_code():
     md = "用 `数据库连接` 这个变量"
     out = to_traditional_markdown(md)

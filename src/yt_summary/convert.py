@@ -18,9 +18,11 @@ import opencc
 
 _cc: opencc.OpenCC | None = None
 
-# fenced code block(```...``` 或 ~~~...~~~,皆為合法 Markdown)或 inline code(`...`)
-# ——這些區塊要原樣保留,不做繁簡轉換(程式碼/字串/指令可能含簡體字面值,轉了就改壞)。
-_CODE = re.compile(r"```.*?```|~~~.*?~~~|`[^`]*`", re.S)
+# inline code(`...`)——單行內要原樣保留。
+_INLINE = re.compile(r"`[^`\n]*`")
+# fenced code:開 fence 3+ 個 ` 或 ~(可帶 info string);閉 fence 同字元、長度 >=、且不帶 info。
+_FENCE_OPEN = re.compile(r"^\s*(`{3,}|~{3,})")
+_FENCE_CLOSE = re.compile(r"^\s*(`{3,}|~{3,})[ \t]*$")
 
 
 def to_traditional(text: str) -> str:
@@ -33,15 +35,40 @@ def to_traditional(text: str) -> str:
     return _cc.convert(text)
 
 
+def _convert_prose_line(line: str) -> str:
+    """轉一行散文,但保留其中的 inline code。"""
+    out: list[str] = []
+    last = 0
+    for m in _INLINE.finditer(line):
+        out.append(to_traditional(line[last:m.start()]))
+        out.append(m.group(0))
+        last = m.end()
+    out.append(to_traditional(line[last:]))
+    return "".join(out)
+
+
 def to_traditional_markdown(md: str) -> str:
-    """對 markdown 轉繁,但保留 code 區塊原樣(D8:程式碼原樣保留)。"""
+    """對 markdown 轉繁,但完整保留 code 區塊(D8:程式碼原樣保留)。
+
+    逐行狀態機:正確處理任意長度的 ``` / ~~~ fence、巢狀 fence(閉合需同字元且
+    長度 >=)、以及行內的 inline code——程式碼一律不轉繁,以免改壞原始碼。
+    """
     if not md:
         return md
     out: list[str] = []
-    last = 0
-    for m in _CODE.finditer(md):
-        out.append(to_traditional(md[last:m.start()]))  # code 外:轉繁
-        out.append(m.group(0))                          # code 內:原樣
-        last = m.end()
-    out.append(to_traditional(md[last:]))
+    fence: tuple[str, int] | None = None  # (字元, 長度)
+    for line in md.splitlines(keepends=True):
+        if fence is None:
+            m = _FENCE_OPEN.match(line)
+            if m:
+                run = m.group(1)
+                fence = (run[0], len(run))
+                out.append(line)                    # 開 fence 行:原樣(含 info string)
+            else:
+                out.append(_convert_prose_line(line))
+        else:
+            out.append(line)                        # code 內:原樣
+            m = _FENCE_CLOSE.match(line)
+            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= fence[1]:
+                fence = None
     return "".join(out)
