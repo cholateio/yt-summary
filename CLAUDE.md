@@ -1,38 +1,48 @@
-# [PROJECT NAME]
+# yt-summary
 
 > CLAUDE.md（kit v4.2）。本檔只放「這個專案是什麼」——工作流、派工、
 > review 規則由 `.claude/rules/` 自動載入（kit-owned，別在專案裡改）。
-> 首次使用：跑 `claude`，貼上 `init.sh` 結尾印出的 bootstrap prompt，
-> 讓 AI 幫你把 [佔位符] 填掉。
 
 ## Project goal
 
-[一句話：這個專案是什麼、給誰用、核心目的。
- 例：「給小型團隊用的 expense tracking SaaS，優先 self-host。」]
+YouTube 影片轉重點文章的個人 pipeline：長片走 map-reduce（M3→M5→M6）、
+短片（<15min）單次 super prompt 呼叫；文章自動落地個人知識庫 vault/raw/，
+由 vault 的 nightly ingest 蒸餾進 wiki。權威需求：`docs/specs/`（v1 設計
+`2026-07-07-yt-summary-v1-design.md` 優先於原始 spec v0.1）。
 
 ## Stack
 
-- Language: [例：Python 3.12 / TypeScript 5.4 / Go 1.22]
-- Framework: [例：FastAPI / Next.js 14 / none]
-- Datastore: [例：PostgreSQL 16 / SQLite / none]
-- Build/run: [完整指令，例：`pnpm dev` / `make run`]
-- Test: [完整指令，例：`pytest -q` / `pnpm vitest run`——弱模型會照抄
-  這一行來跑驗證，寫到可以直接複製執行的程度]
+- Language: Python 3.12（uv 管理）
+- Framework: none（CLI；LLM 走 headless `claude -p`，訂閱內）
+- Datastore: none（檔案：`output/` 中間產物、vault/raw 匯出）
+- Build/run: `uv run yt-summary <URL> --type A|B|C [--mode auto|full|quick] [--no-vault]`
+- Test: `uv run pytest -q`
 
 ## File layout
 
-[新專案：首次架構決策後填入。既有專案：貼 `tree -L 2` 並在關鍵目錄後
- 加一句用途註記。例：
- - `src/api/` — HTTP handlers，薄層，不放業務邏輯
- - `src/core/` — 業務邏輯，所有 DB writes 走 repository]
+- `src/yt_summary/cli.py` — 進入點：run/remove 子指令、mode 判斷、pipeline 編排
+- `src/yt_summary/config.py` — config.yaml 載入（只有 cli 使用，其他模組收明確參數）
+- `src/yt_summary/m1_fetch.py` — yt-dlp metadata + 字幕下載
+- `src/yt_summary/m2_clean.py` — 字幕去重、斷句 → transcript
+- `src/yt_summary/m3_segment.py` — 章節/token 窗切分
+- `src/yt_summary/m5_notes.py` — 分段筆記 map（並發 LLM）
+- `src/yt_summary/m6_reduce.py` — 筆記整合成文（含中間 reduce）
+- `src/yt_summary/quick.py` — 短片單次呼叫路徑
+- `src/yt_summary/m8_output.py` — 產物落地 + run.log
+- `src/yt_summary/vault.py` — vault/raw 匯出（原子寫入）+ remove
+- `src/yt_summary/llm.py` — claude -p wrapper（唯一 LLM 入口）
+- `src/yt_summary/prompts.py` — 全部 prompt 模板（type 特化）
+- `src/yt_summary/tokens.py` — 啟發式 token 估算
+- `tests/` — 單元/整合測試（mock subprocess 與 LLM，不打真服務）
+- `docs/smoke-test.md` — 手動煙霧測試（需網路與訂閱額度）
 
 ## Project-specific constraints（禁區與硬規則）
 
-[本專案的不可違反規則。格式：每條一行，「路徑或範圍：規則 + 原因 +
- 替代作法」。越具體越好。例：
- - `src/legacy/payment/`：不可修改——會破壞舊金流；新需求走 `src/payment_v2/`
- - 所有 DB writes 必須走 repository pattern，不准裸 SQL
- 新專案可留空，踩到坑再累積。]
+- `/mnt/c/Users/micro/Documents/vault/wiki/`：本專案絕不寫入——wiki 由 vault
+  自己的治理規則管理；程式與 AI 都只准 grep（remove 子指令僅列出受影響筆記）。
+  程式僅寫 `vault/raw/`（原子寫入）。
+- 所有 LLM 呼叫必須走 `llm.call_llm`，不准各模組自行 subprocess claude。
+- 單元測試不得呼叫真實 yt-dlp / claude CLI（一律注入 fake）。
 
 **同步執法**：上面每一條「路徑型」禁區，都要把路徑同步加進
 `.claude/protected-paths`（一行一個 glob，`*` 會跨目錄層級，
