@@ -1150,7 +1150,9 @@ TRANSCRIPT = {
 
 SEGMENT = {"segment_id": 2, "start": 612.0, "end": 1180.5,
            "chapter_title": "回測", "context_prefix": "前段講了均線。",
-           "sentences": TRANSCRIPT["sentences"], "token_estimate": 10}
+           # 句子必須落在本段時間範圍內,逐字稿行才會是 [10:12]
+           "sentences": [{"i": 5, "start": 612.0, "end": 616.0, "text": "年化 14.2% 的策略"}],
+           "token_estimate": 10}
 
 NOTE = {"segment_id": 2, "status": "ok", "time_range": [612.0, 1180.5],
         "topic": "回測陷阱",
