@@ -80,8 +80,10 @@ yt-summary/
 
 - 介面:`call_llm(prompt: str, model: str, expect_json: bool = False) -> LLMResult`
   (`LLMResult` 含 `text`、`parsed`(若 expect_json)、`usage`、`duration`)。
-- 實作:`claude -p --output-format json --model {haiku|sonnet|opus} --allowedTools ""`,
-  prompt 走 **stdin**(避免 argv 長度與 shell 逃逸問題);禁用全部工具——這是純文字轉換任務。
+- 實作:`claude -p --output-format json --model {haiku|sonnet|opus} --tools ""`,
+  prompt 走 **stdin**(避免 argv 長度與 shell 逃逸問題)。用 `--tools ""` 讓工具完全
+  不存在(比 `--allowedTools ""` 只擋放行更強)——這是純文字轉換任務;
+  2026-07-07 已實測此組合可正常回傳。
 - JSON 可靠度:prompt 內給明確 schema 與範例;解析失敗 → 一次「修復重試」
   (把壞輸出丟回去要求修成合法 JSON);再失敗 → 拋出標記,由呼叫端決定
   (M5:該段標記 `failed`,M6 收到缺段警告仍繼續;quick:整支中止回報)。

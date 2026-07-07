@@ -1915,7 +1915,7 @@ git commit -m "feat: M8 產物落地與 run.log 彙總"
 - Consumes: transcript 資料契約、`prompts.ts`。
 - Produces:
   - `vault.slugify(title: str, max_len: int = 40) -> str`
-  - `vault.export_article(article_md: str, transcript: dict, raw_dir: Path, type_code: str, today: date | None = None) -> Path`——檔名 `yt-{YYYYMMDD}-{slug}-{video_id}.md`;寫入前先刪同 video_id 舊檔(重跑覆蓋);`.tmp-` 暫存檔 + `os.replace` 原子寫入;檔頭含來源 URL/頻道/時長/type/產生日期。
+  - `vault.export_article(article_md: str, transcript: dict, raw_dir: Path, type_code: str, today: date | None = None) -> Path`——檔名 `yt-{YYYYMMDD}-{slug}-{video_id}.md`;`.tmp-` 暫存檔 + `os.replace` 原子寫入;**成功寫入後**才刪同 video_id 舊檔(重跑覆蓋;中斷時舊匯出必須保留);檔頭含來源 URL/頻道/時長/type/產生日期。
 
 - [ ] **Step 1: 寫失敗測試 `tests/test_vault_export.py`**
 
@@ -2006,15 +2006,17 @@ def export_article(article_md: str, transcript: dict, raw_dir: Path,
     vid = transcript["video_id"]
     name = f"yt-{generated.strftime('%Y%m%d')}-{slugify(transcript['title'])}-{vid}.md"
 
-    # 重跑覆蓋語意:先清掉同 video_id 的舊檔(檔名日期可能不同)
-    for stale in raw_dir.glob(f"yt-*-{vid}.md"):
-        stale.unlink()
-
     content = _header(transcript, type_code, generated) + article_md
     tmp = raw_dir / f".tmp-{name}"
     target = raw_dir / name
     tmp.write_text(content, encoding="utf-8")
     os.replace(tmp, target)  # 原子:ingest 只會看到完整檔或沒有檔
+
+    # 重跑覆蓋語意:新檔成功落地「之後」才清同 video_id 的舊檔(檔名日期可能不同)。
+    # 順序不可倒過來——先刪再寫的話,中斷會讓舊匯出消失且新檔沒落地。
+    for stale in raw_dir.glob(f"yt-*-{vid}.md"):
+        if stale != target:
+            stale.unlink()
     return target
 ```
 
