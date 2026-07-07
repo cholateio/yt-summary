@@ -4,6 +4,8 @@ from __future__ import annotations
 import datetime as dt
 import os
 import re
+import shutil
+from dataclasses import dataclass
 from pathlib import Path
 
 from .prompts import ts
@@ -45,3 +47,58 @@ def export_article(article_md: str, transcript: dict, raw_dir: Path,
         if stale != target:
             stale.unlink()
     return target
+
+
+_ID = r"[A-Za-z0-9_-]{11}"
+_URL_PATTERNS = [
+    re.compile(r"[?&]v=(" + _ID + ")"),
+    re.compile(r"youtu\.be/(" + _ID + ")"),
+    re.compile(r"/(?:shorts|live|embed)/(" + _ID + ")"),
+]
+
+
+def extract_video_id(target: str) -> str:
+    for pat in _URL_PATTERNS:
+        m = pat.search(target)
+        if m:
+            return m.group(1)
+    if re.fullmatch(_ID, target):
+        return target
+    raise ValueError(f"無法從輸入解析 YouTube video id:{target}")
+
+
+@dataclass
+class RemoveReport:
+    video_id: str
+    removed_output: bool
+    removed_raw: list[str]
+    affected_wiki: list[str]
+
+
+def remove(target: str, output_dir: Path, raw_dir: Path,
+           wiki_dir: Path) -> RemoveReport:
+    vid = extract_video_id(target)
+
+    removed_output = False
+    out = Path(output_dir) / vid
+    if out.exists():
+        shutil.rmtree(out)
+        removed_output = True
+
+    removed_raw = []
+    for f in Path(raw_dir).glob(f"yt-*-{vid}.md"):
+        f.unlink()
+        removed_raw.append(f.name)
+
+    affected = []
+    wiki_dir = Path(wiki_dir)
+    for f in wiki_dir.rglob("*.md"):
+        try:
+            text = f.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for line in text.splitlines():
+            if line.startswith("source:") and vid in line:
+                affected.append(str(f.relative_to(wiki_dir)))
+                break
+    return RemoveReport(vid, removed_output, sorted(removed_raw), sorted(affected))
