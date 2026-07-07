@@ -1,0 +1,20 @@
+defaults:
+  language_out: zh-TW
+  concurrency: 2            # claude -p 訂閱額度考量
+  output_dir: ./output
+
+modes:
+  quick_threshold_sec: 900  # < 15min 自動走 quick
+
+llm:
+  backend: claude-cli
+  models: { m5: sonnet, m6: opus, quick: opus }
+
+vault:
+  export: true
+  raw_dir: /mnt/c/Users/micro/Documents/vault/raw
+
+types:
+  A: { segment_tokens: [3000, 4000], overlap_sec: 45 }
+  B: { segment_tokens: [3000, 4000], overlap_sec: 45 }
+  C: { segment_tokens: [2000, 3000], overlap_sec: 30 }

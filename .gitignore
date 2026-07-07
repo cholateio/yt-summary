@@ -20,6 +20,8 @@ dist/
 build/
 __pycache__/
 .venv/
+output/
+*.egg-info/
 
 # Logs
 *.log
