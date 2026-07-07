@@ -93,6 +93,7 @@ def cmd_run(args) -> int:
         except OSError as e:
             print(f"警告:vault 匯出失敗,已跳過({e})", file=sys.stderr)
 
+    print(runlog.summary_line())
     print(f"完成(mode={mode}):{outdir / 'article_final.md'}")
     return 0
 

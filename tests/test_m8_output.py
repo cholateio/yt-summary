@@ -25,6 +25,28 @@ def test_runlog_render():
     assert "total" in out
 
 
+def test_runlog_totals_and_summary():
+    log = RunLog()
+    log.add("M1 擷取", 3.0)
+    # 兩次呼叫:每次 in=(100+50+10)=160、out=20、cost=0.5
+    log.add_llm("M5 分段筆記", 100.0, [_result(), _result(cost=1500.0)])
+    assert log.totals() == (103.0, 320, 40, 1500.5)
+    s = log.summary_line()
+    assert "320 tokens" in s          # 輸入
+    assert "40 tokens" in s           # 輸出
+    assert "$1500.50" in s            # 等值成本
+    assert "103.0s" in s              # 耗時
+
+
+def test_summary_line_thousands_separator():
+    log = RunLog()
+    log.add_llm("M6", 5.0, [LLMResult(
+        text="x", parsed=None,
+        usage={"input_tokens": 1234567, "output_tokens": 0},
+        cost_usd=0.0, duration_sec=5.0, model="opus")])
+    assert "1,234,567 tokens" in log.summary_line()
+
+
 def test_write_outputs_full(tmp_path):
     log = RunLog()
     log.add("step", 1.0)

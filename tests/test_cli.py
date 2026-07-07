@@ -116,6 +116,8 @@ def test_run_full_end_to_end(tmp_path, monkeypatch, capsys):
     assert len(exported) == 1
     assert "# 長片文章" in exported[0].read_text(encoding="utf-8")
 
+    assert "本次用量" in capsys.readouterr().out   # 用量摘要印到 stdout
+
 
 def test_run_no_vault_flag(tmp_path, monkeypatch):
     cfg, out, raw = _write_config(tmp_path)

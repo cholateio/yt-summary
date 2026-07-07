@@ -40,6 +40,21 @@ class RunLog:
             LogEntry(step, duration_sec, len(results), tin, tout, cost, note)
         )
 
+    def totals(self) -> tuple[float, int, int, float]:
+        """回傳 (總耗時秒, 總輸入 token, 總輸出 token, 總成本 USD)。"""
+        return (
+            sum(e.duration_sec for e in self.entries),
+            sum(e.tokens_in for e in self.entries),
+            sum(e.tokens_out for e in self.entries),
+            sum(e.cost_usd for e in self.entries),
+        )
+
+    def summary_line(self) -> str:
+        """一行用量摘要,供 stdout 顯示(claude -p 訂閱制,成本為等值 API 估算)。"""
+        dur, tin, tout, cost = self.totals()
+        return (f"本次用量:輸入 {tin:,} tokens、輸出 {tout:,} tokens、"
+                f"等值成本 ${cost:.2f}、耗時 {dur:.1f}s")
+
     def render(self) -> str:
         lines = ["yt-summary run log", "=" * 64]
         for e in self.entries:
@@ -51,8 +66,7 @@ class RunLog:
                 row += f"  ({e.note})"
             lines.append(row)
         lines.append("-" * 64)
-        total_t = sum(e.duration_sec for e in self.entries)
-        total_c = sum(e.cost_usd for e in self.entries)
+        total_t, _, _, total_c = self.totals()
         lines.append(f"{'total':<16}{total_t:>9.1f}s  cost=${total_c:.2f}")
         return "\n".join(lines) + "\n"
 
