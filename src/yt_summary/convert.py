@@ -52,7 +52,14 @@ def to_traditional_markdown(md: str) -> str:
     """對 markdown 轉繁,但完整保留 code 區塊(D8:程式碼原樣保留)。
 
     逐行狀態機:正確處理任意長度的 ``` / ~~~ fence、巢狀 fence(閉合需同字元且
-    長度 >=)、以及行內的 inline code——程式碼一律不轉繁,以免改壞原始碼。
+    長度 >=)、以及行內的 inline code(任意長度 backtick run)——程式碼一律不轉繁。
+
+    已知限制(v1 刻意接受,codex review 記錄):
+    - 4-space 縮排式 code block「不」保護。本專案 prompt 一律產 fenced block;
+      而縮排偵測是上下文相依的,naive 跳過會誤傷縮排散文(list 延續/引言),
+      弊大於利。若未來內容改用縮排 code,再補完整 CommonMark 縮排規則。
+    - Markdown 連結/裸 URL 中的中文字元會被轉。本專案來源 URL 皆為 ASCII
+      (YouTube),文章不產中文路徑連結,故不實作連結目標保護。
     """
     if not md:
         return md
