@@ -10,8 +10,6 @@ updated = 2026-07-11       # 最後一次人工確認本檔內容的日期
 summary = "uv run yt-summary \"<youtube-url>\" --type A"
 summary_mode = "uv run yt-summary \"<youtube-url>\" --type A --mode full"
 remove = "uv run yt-summary remove <video-id-or-url>"
-test = "uv run pytest -q"
-sync = "uv sync"
 
 # 每個付費/可能付費的外部服務一節 [[paid]];完全沒有就整段刪掉
 [[paid]]
