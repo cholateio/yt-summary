@@ -52,3 +52,18 @@ def test_map_fills_missing_segment_id():
     notes, _ = map_segments([SEG(5)], TRANSCRIPT, "A", "sonnet",
                             concurrency=1, call=call)
     assert notes[0]["segment_id"] == 5
+
+
+def test_on_progress_reports_every_segment_including_failures():
+    def call(prompt, model, expect_json=False, **kw):
+        if '"segment_id": 1' in prompt:
+            raise LLMError("boom")
+        return _result({"segment_id": 0, "topic": "t0", "points": []})
+
+    seen = []
+    map_segments([SEG(0), SEG(1)], TRANSCRIPT, "A", "sonnet", concurrency=1,
+                 call=call, on_progress=lambda *a: seen.append(a))
+
+    # 單段失敗不中斷,但必須即時回報——否則使用者以為全數成功,實際少了一段
+    assert [(done, total) for done, total, _, _ in seen] == [(1, 2), (2, 2)]
+    assert {seg_id: err for _, _, seg_id, err in seen} == {0: None, 1: "boom"}

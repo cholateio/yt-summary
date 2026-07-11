@@ -88,10 +88,15 @@ def test_run_full_end_to_end(tmp_path, monkeypatch, capsys):
 
     monkeypatch.setattr(m1_fetch, "download_subtitle", fake_download)
 
-    def fake_map_segments(segments, transcript, type_code, model, concurrency, call=None):
+    def fake_map_segments(segments, transcript, type_code, model, concurrency,
+                          call=None, on_progress=None):
         assert isinstance(segments, list) and len(segments) > 0
         assert model == "sonnet"
         assert concurrency == 1
+        # cli 必須把進度 callback 傳下來,單段失敗才會即時可見
+        assert on_progress is not None
+        on_progress(1, 2, 0, None)
+        on_progress(2, 2, 1, "boom")
         return ([{"segment_id": 0, "status": "ok", "topic": "t", "points": []},
                  {"segment_id": 1, "status": "failed", "error": "boom"}], [])
 

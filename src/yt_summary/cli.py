@@ -2,14 +2,17 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import sys
 import time
 from pathlib import Path
 
 from . import convert, m1_fetch, m2_clean, m3_segment, m5_notes, m6_reduce, quick, vault
 from .config import load_config
-from .llm import LLMError
+from .llm import LLMError, call_llm
 from .m8_output import RunLog, write_outputs
+from .progress import Reporter
+from .prompts import ts
 
 
 def decide_mode(duration_sec: int, mode_arg: str, threshold: int) -> str:
@@ -28,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
                      help="A=AI/談話(預設) B=財經 C=coding")
     run.add_argument("--mode", default="auto", choices=["auto", "full", "quick"])
     run.add_argument("--no-vault", action="store_true")
+    run.add_argument("--quiet", action="store_true", help="關閉進度輸出(stderr)")
     run.add_argument("--config", default="config.yaml")
     run.set_defaults(func=cmd_run)
 
@@ -38,51 +42,86 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def cmd_run(args) -> int:
+def cmd_run(args, reporter: Reporter | None = None) -> int:
     cfg = load_config(Path(args.config))
     runlog = RunLog()
+    rep = reporter or Reporter(enabled=not args.quiet)
 
-    t = time.monotonic()
-    meta = m1_fetch.fetch_meta(args.url)
-    picked = m1_fetch.pick_subtitle_lang(meta)
-    if picked is None:
-        raise m1_fetch.FetchError("無任何字幕(手動/自動皆無)——Whisper fallback 為 Phase 2")
-    lang, source = picked
-    outdir = cfg.output_dir / meta["id"]
-    outdir.mkdir(parents=True, exist_ok=True)
-    sub_path = m1_fetch.download_subtitle(args.url, lang, source, outdir)
-    runlog.add("M1 擷取", time.monotonic() - t)
+    # 重試原本是靜默 sleep 30s,無從分辨卡死或重試——綁進所有下游 LLM 呼叫。
+    def on_retry(attempt, retries, wait_sec, err):
+        rep.warn(f"claude -p 失敗,{wait_sec}s 後重試({attempt}/{retries}):{str(err)[:120]}")
 
-    t = time.monotonic()
-    cues = m2_clean.dedup_cues(m2_clean.parse_json3(sub_path))
-    sentences = m2_clean.split_sentences(cues)
-    transcript = m2_clean.build_transcript(meta, sentences, source, lang)
-    runlog.add("M2 前處理", time.monotonic() - t)
+    call = functools.partial(call_llm, on_retry=on_retry)
 
-    mode = decide_mode(transcript["duration_sec"], args.mode, cfg.quick_threshold_sec)
-    segments = notes = None
-    if mode == "quick":
+    try:
+        rep.begin("抓取影片資訊")
         t = time.monotonic()
-        article, calls = quick.quick_summarize(
-            transcript, args.type_code, cfg.llm_models["quick"])
-        runlog.add_llm("QUICK 單次呼叫", time.monotonic() - t, calls)
-    else:
-        tcfg = cfg.types[args.type_code]
-        t = time.monotonic()
-        segments = m3_segment.segment(transcript, tcfg.segment_tokens, tcfg.overlap_sec)
-        runlog.add("M3 切分", time.monotonic() - t, note=f"{len(segments)} 段")
+        meta = m1_fetch.fetch_meta(args.url)
+        picked = m1_fetch.pick_subtitle_lang(meta)
+        if picked is None:
+            raise m1_fetch.FetchError("無任何字幕(手動/自動皆無)——Whisper fallback 為 Phase 2")
+        lang, source = picked
+        duration = int(meta.get("duration") or 0)  # 與 transcript["duration_sec"] 同源
+        mode = decide_mode(duration, args.mode, cfg.quick_threshold_sec)
+        rep.set_total(4 if mode == "full" else 3)
+        rep.ok(f"「{meta.get('title', '')}」({ts(duration)}) → 模式 {mode}")
 
-        t = time.monotonic()
-        notes, m5_calls = m5_notes.map_segments(
-            segments, transcript, args.type_code, cfg.llm_models["m5"], cfg.concurrency)
-        n_failed = sum(1 for n in notes if n.get("status") != "ok")
-        runlog.add_llm("M5 分段筆記", time.monotonic() - t, m5_calls,
-                       note=f"{n_failed} failed" if n_failed else "")
+        rep.step(f"下載字幕({lang},{'手動' if source == 'manual_subs' else '自動'})")
+        outdir = cfg.output_dir / meta["id"]
+        outdir.mkdir(parents=True, exist_ok=True)
+        sub_path = m1_fetch.download_subtitle(args.url, lang, source, outdir)
+        runlog.add("M1 擷取", time.monotonic() - t)
+        rep.ok()
 
+        rep.step("前處理")
         t = time.monotonic()
-        article, m6_calls = m6_reduce.reduce_notes(
-            notes, transcript, args.type_code, cfg.llm_models["m6"])
-        runlog.add_llm("M6 整合", time.monotonic() - t, m6_calls)
+        cues = m2_clean.dedup_cues(m2_clean.parse_json3(sub_path))
+        sentences = m2_clean.split_sentences(cues)
+        transcript = m2_clean.build_transcript(meta, sentences, source, lang)
+        runlog.add("M2 前處理", time.monotonic() - t)
+        rep.ok(f"{len(sentences)} 句")
+
+        segments = notes = None
+        if mode == "quick":
+            rep.step(f"產生文章(quick 單次呼叫,{cfg.llm_models['quick']})")
+            t = time.monotonic()
+            article, calls = quick.quick_summarize(
+                transcript, args.type_code, cfg.llm_models["quick"], call=call)
+            runlog.add_llm("QUICK 單次呼叫", time.monotonic() - t, calls)
+            rep.ok()
+        else:
+            tcfg = cfg.types[args.type_code]
+            t = time.monotonic()
+            segments = m3_segment.segment(transcript, tcfg.segment_tokens, tcfg.overlap_sec)
+            runlog.add("M3 切分", time.monotonic() - t, note=f"{len(segments)} 段")
+
+            rep.step(f"分段筆記 {len(segments)} 段"
+                     f"({cfg.llm_models['m5']},並發 {cfg.concurrency})")
+            t = time.monotonic()
+
+            def on_segment(done, total, seg_id, error):
+                if error:
+                    rep.warn(f"第 {seg_id} 段失敗,該段內容將缺漏:{error[:120]}")
+                rep.progress(done, total)
+
+            notes, m5_calls = m5_notes.map_segments(
+                segments, transcript, args.type_code, cfg.llm_models["m5"],
+                cfg.concurrency, call=call, on_progress=on_segment)
+            n_failed = sum(1 for n in notes if n.get("status") != "ok")
+            runlog.add_llm("M5 分段筆記", time.monotonic() - t, m5_calls,
+                           note=f"{n_failed} failed" if n_failed else "")
+            rep.ok(f"{len(segments) - n_failed}/{len(segments)} 段成功"
+                   + (f",{n_failed} 段失敗" if n_failed else ""))
+
+            rep.step(f"整合成文({cfg.llm_models['m6']})")
+            t = time.monotonic()
+            article, m6_calls = m6_reduce.reduce_notes(
+                notes, transcript, args.type_code, cfg.llm_models["m6"], call=call)
+            runlog.add_llm("M6 整合", time.monotonic() - t, m6_calls)
+            rep.ok()
+    except BaseException:
+        rep.close_line()  # 未收尾的步驟行斷掉,錯誤訊息才不會黏在後面
+        raise
 
     t = time.monotonic()
     article = convert.to_traditional_markdown(article)  # 確定性簡→繁,但保留 code 區塊

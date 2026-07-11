@@ -79,3 +79,20 @@ def test_nonzero_exit_exhausts_retries():
     run = _fake_run([(1, "", "boom"), (1, "", "boom")])
     with pytest.raises(LLMError):
         call_llm("p", model="opus", run=run, sleep=lambda s: None)
+
+
+def test_on_retry_is_called_before_the_silent_wait():
+    run = _fake_run([(1, "", "rate limited"), (0, _envelope("ok"), "")])
+    seen = []
+    r = call_llm("p", model="opus", run=run, sleep=lambda s: None,
+                 on_retry=lambda a, retries, wait, err: seen.append((a, retries, wait)))
+    assert r.text == "ok"
+    assert seen == [(1, 1, 30)]   # 重試前先出聲:30s 的等待原本完全靜默
+    assert len(run.calls) == 2
+
+
+def test_on_retry_not_called_when_first_attempt_succeeds():
+    run = _fake_run([(0, _envelope("ok"), "")])
+    seen = []
+    call_llm("p", model="opus", run=run, on_retry=lambda *a: seen.append(a))
+    assert seen == []

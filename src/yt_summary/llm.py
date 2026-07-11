@@ -74,6 +74,7 @@ def call_llm(
     retry_wait_sec: int = 30,
     run=subprocess.run,
     sleep=time.sleep,
+    on_retry=None,
 ) -> LLMResult:
     start = time.monotonic()
     attempt = 0
@@ -85,6 +86,9 @@ def call_llm(
             attempt += 1
             if attempt > retries:
                 raise LLMError(f"claude -p 重試後仍失敗:{e}") from e
+            # 重試前先回報:等待期間(預設 30s)原本是完全靜默的,無從分辨卡死或重試。
+            if on_retry is not None:
+                on_retry(attempt, retries, retry_wait_sec, e)
             sleep(retry_wait_sec)
 
     text = data.get("result") or ""

@@ -26,6 +26,7 @@ uv run yts "https://youtu.be/VIDEO_ID"
 | `uv run yts <URL> --type B\|C` | 換 type(B=財經 C=coding);A 是預設,不用打 |
 | `uv run yts <URL> --mode full\|quick` | 強制指定模式(預設 auto:<10min 走 quick) |
 | `uv run yts <URL> --no-vault` | 不匯出 vault |
+| `uv run yts <URL> --quiet` | 關閉進度輸出(進度走 stderr,stdout 只有最終摘要與路徑) |
 | `uv run yts remove <VIDEO_ID或URL>` | 事後移除(output + vault/raw;wiki 只列不動) |
 | `uv run pytest -q` | 唯一的 quality gate(mock 一切外部服務,不吃額度) |
 
@@ -67,6 +68,25 @@ uv run yts "https://youtu.be/VIDEO_ID"
 - 輸出:`output/{video_id}/`(中間產物可追溯)+ `vault/raw/`(進知識庫)。
 
 ---
+
+## 📟 執行時看得到什麼
+
+進度走 **stderr**(stdout 只留最終的用量摘要與產物路徑,pipe 出去不會被污染),
+`--quiet` 可關掉。非 TTY(重導向到檔案)時不用 `\r` 覆寫,不會塞控制字元。
+
+```
+抓取影片資訊… ✓ 「影片標題」(20:00) → 模式 full
+[1/4] 下載字幕(zh,自動)… ✓
+[2/4] 前處理… ✓ 400 句
+[3/4] 分段筆記 4 段(sonnet,並發 2)… 3/4
+      ⚠ claude -p 失敗,30s 後重試(1/1):…
+      ⚠ 第 2 段失敗,該段內容將缺漏:…
+      ✓ 3/4 段成功,1 段失敗
+[4/4] 整合成文(opus)… ✓
+```
+
+那兩行 `⚠` 是重點:**M5 單段失敗不會中斷整支**(design),失敗的段落內容就這樣
+少掉了。以前它只躺在 `run.log` 裡,你會以為全數成功。現在它當場出聲。
 
 ## 🧠 半年後最容易忘的事
 
