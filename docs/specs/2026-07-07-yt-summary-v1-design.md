@@ -12,7 +12,7 @@
 | # | 決策 | 內容 | 理由 |
 |---|------|------|------|
 | D1 | 短影片模式(quick) | 短片仍走 M1/M2 抓字幕,完整逐字稿 + super prompt 單次 LLM 呼叫;跳過 M3/M5/M6 | 與長流程共用 80% 程式碼、可控、保留時間戳 |
-| D2 | 模式選擇 | `duration < 900s` 自動走 quick,`--mode full\|quick` 可強制覆寫 | 預設零負擔,短而密的影片留逃生門 |
+| D2 | 模式選擇 | `duration < 600s` 自動走 quick,`--mode full\|quick` 可強制覆寫 | 預設零負擔,短而密的影片留逃生門。門檻取 10 分鐘:使用者願意親自看完的長度,不值得動用 map-reduce(2026-07-11 由 900s 下修) |
 | D3 | quick 的 type 規則 | super prompt 依 `--type` 嵌入特化指令(B:數字原樣、C:程式碼轉錄),但一律不抽畫格 | prompt 差異便宜;畫格是成本大頭,要畫格用 `--mode full`(Phase 3 後) |
 | D4 | vault 整合 | 跑完把 `article_final.md` 複製到 `vault/raw/`,由既有 nightly ingest 蒸餾進 wiki | 零新增整合邏輯,完全尊重 vault 治理(raw 只進不改、wiki 存沉澱知識) |
 | D5 | LLM 呼叫 | headless `claude -p`(Claude Code 訂閱內),不走 Anthropic API | 零邊際成本;與 vault ingest.sh 同模式。翻盤條件:若 JSON 可靠度或 rate limit 成為實測瓶頸,改走 API(structured outputs) |
@@ -32,11 +32,11 @@ M4 畫格擷取、Type C 視覺輸入、M6b 系列 synthesis、自動分類 type
 
 ## 2. 架構
 
-CLI 有兩個子指令:`yt-summary <URL> --type A|B|C [...]`(主流程,下圖)與
-`yt-summary remove <url|video_id>`(事後移除,見 §6.1)。
+CLI 有兩個子指令:`yts <URL> [--type A|B|C] [...]`(主流程,下圖;`--type` 預設 A)與
+`yts remove <url|video_id>`(事後移除,見 §6.1)。指令名 `yt-summary` 為等價舊名。
 
 ```
-yt-summary <URL> --type A|B|C [--mode auto|full|quick] [--no-vault]
+yts <URL> [--type A|B|C(預設 A)] [--mode auto|full|quick] [--no-vault]
    │
    ▼
  M1 擷取 ── yt-dlp:metadata + 字幕(人工>自動;zh-TW>zh-Hant>zh>en;json3)
@@ -44,7 +44,7 @@ yt-summary <URL> --type A|B|C [--mode auto|full|quick] [--no-vault]
    ▼
  M2 前處理 ── 滾動字幕去重、規則法斷句(gap>0.8s)→ transcript.json
    │
-   ├── duration < 900s 且 mode=auto ──▶ QUICK:全逐字稿 + type 特化 super prompt
+   ├── duration < 600s 且 mode=auto ──▶ QUICK:全逐字稿 + type 特化 super prompt
    │                                     → 單次 claude -p(opus)→ article_final.md
    ▼
  FULL:M3 切分(章節優先 > token 窗 + overlap,對齊句尾)
@@ -127,7 +127,7 @@ yt-summary/
 一併終止)。設計保證:vault 匯出是 pipeline 最後一步——中斷只會在 `output/{video_id}/`
 留下中間產物(保留供 debug,重跑覆蓋),vault 不會有任何殘留。
 
-**事後移除 `yt-summary remove <url|video_id>`**:
+**事後移除 `yts remove <url|video_id>`**:
 
 1. 刪 `output/{video_id}/`。
 2. 刪 `vault/raw/yt-*-{video_id}.md`(檔名含 video_id 即為此設計)。
@@ -148,7 +148,7 @@ defaults:
   output_dir: ./output
 
 modes:
-  quick_threshold_sec: 900  # < 15min 自動走 quick
+  quick_threshold_sec: 600  # < 10min 自動走 quick
 
 llm:
   backend: claude-cli       # v1 唯一實作;保留欄位供未來 API backend
@@ -176,7 +176,7 @@ vault:
   邊界(句尾對齊、小章節合併、overlap)、tokens.py 估算、vault 檔名 slug、
   vault 原子寫入與 remove(tmp 目錄模擬 raw/wiki:未攝入完全移除、已攝入列清單)、
   llm.py 的 JSON 修復流程(mock subprocess)。
-- 煙霧測試(需網路 + claude 訂閱,手動跑):一支 <15min 影片走 quick、
+- 煙霧測試(需網路 + claude 訂閱,手動跑):一支 <10min 影片走 quick、
   一支 30–40min Type A/B 影片走 full,端對端產出 article_final.md 並落 vault/raw。
 - 驗收標準:沿用 spec §11 的留存率測試(golden list 命中 ≥ 85%)——由使用者
   以熟悉的影片人工驗證;數字保真(Type B)抽查。

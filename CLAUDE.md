@@ -6,7 +6,7 @@
 ## Project goal
 
 YouTube 影片轉重點文章的個人 pipeline：長片走 map-reduce（M3→M5→M6）、
-短片（<15min）單次 super prompt 呼叫；文章自動落地個人知識庫 vault/raw/，
+短片（<10min）單次 super prompt 呼叫；文章自動落地個人知識庫 vault/raw/，
 由 vault 的 nightly ingest 蒸餾進 wiki。權威需求：`docs/specs/`（v1 設計
 `2026-07-07-yt-summary-v1-design.md` 優先於原始 spec v0.1）。
 
@@ -15,7 +15,8 @@ YouTube 影片轉重點文章的個人 pipeline：長片走 map-reduce（M3→M5
 - Language: Python 3.12（uv 管理）
 - Framework: none（CLI；LLM 走 headless `claude -p`，訂閱內）
 - Datastore: none（檔案：`output/` 中間產物、vault/raw 匯出）
-- Build/run: `uv run yt-summary <URL> --type A|B|C [--mode auto|full|quick] [--no-vault]`
+- Build/run: `uv run yts <URL> [--type A|B|C]（預設 A）[--mode auto|full|quick] [--no-vault]`
+  （`yt-summary` 為等價舊名）
 - Test: `uv run pytest -q`
 
 ## File layout
@@ -28,6 +29,7 @@ YouTube 影片轉重點文章的個人 pipeline：長片走 map-reduce（M3→M5
 - `src/yt_summary/m5_notes.py` — 分段筆記 map（並發 LLM）
 - `src/yt_summary/m6_reduce.py` — 筆記整合成文（含中間 reduce）
 - `src/yt_summary/quick.py` — 短片單次呼叫路徑
+- `src/yt_summary/convert.py` — opencc 確定性簡→繁（s2twp），保留 code 區塊
 - `src/yt_summary/m8_output.py` — 產物落地 + run.log
 - `src/yt_summary/vault.py` — vault/raw 匯出（原子寫入）+ remove
 - `src/yt_summary/llm.py` — claude -p wrapper（唯一 LLM 入口）

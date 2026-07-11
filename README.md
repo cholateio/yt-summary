@@ -14,18 +14,47 @@
 ```bash
 uv sync                        # 建 venv + 裝依賴(含 dev)
 # 確認 claude CLI 已登入(claude -p 走 Claude Code 訂閱)
-uv run yt-summary "https://youtu.be/VIDEO_ID" --type A
+uv run yts "https://youtu.be/VIDEO_ID"
 ```
 
-其他指令:
+**只要記上面那一行。** type 預設 A(AI/談話)、mode 預設 auto(依片長自選)、自動匯出 vault。
+其餘都是例外才用:
 
 | 指令 | 用途 |
 |------|------|
-| `uv run yt-summary <URL> --type A\|B\|C` | 影片 → 文章(A=AI 談話 B=財經 C=coding) |
-| `uv run yt-summary <URL> --type A --mode full\|quick` | 強制指定模式(預設 auto:<15min 走 quick) |
-| `uv run yt-summary <URL> --type A --no-vault` | 不匯出 vault |
-| `uv run yt-summary remove <VIDEO_ID或URL>` | 事後移除(output + vault/raw;wiki 只列不動) |
+| `uv run yts <URL>` | 影片 → 文章(預設 type A、mode auto) |
+| `uv run yts <URL> --type B\|C` | 換 type(B=財經 C=coding);A 是預設,不用打 |
+| `uv run yts <URL> --mode full\|quick` | 強制指定模式(預設 auto:<10min 走 quick) |
+| `uv run yts <URL> --no-vault` | 不匯出 vault |
+| `uv run yts remove <VIDEO_ID或URL>` | 事後移除(output + vault/raw;wiki 只列不動) |
 | `uv run pytest -q` | 唯一的 quality gate(mock 一切外部服務,不吃額度) |
+
+舊指令名 `yt-summary` 仍等價可用(pyproject 保留兩個 entry point),但 `yts` 比較短。
+
+## 🎛️ type 與 mode(唯二要決定的參數)
+
+### `--type`(選填,**預設 A**)——決定 prompt 特化、附錄、切分粒度
+
+| type | 用在 | prompt 特化(`prompts.py` TYPE_RULES) | 附錄 | 切分(`config.yaml`) |
+|------|------|--------------------------------------|------|---------------------|
+| **A** | AI / 談話 / 觀點 | 保留論點的**推理鏈**——不只記結論,也記講者「為什麼」這樣主張 | 工具/資源清單 | 3000–4000 token,重疊 45s |
+| **B** | 財經 / 投資 | 數字、百分比、日期、股票代號、指標名**原樣抄錄**,禁止改寫成「大約」「不錯」 | **必含**數字彙整表(數值｜說明｜時間戳) | 3000–4000 token,重疊 45s |
+| **C** | coding / 教學 | 程式碼、檔名、函式名、指令參數**原樣保留**;口述的實作步驟不得簡化 | **必含**完整程式碼區塊(每塊標時間戳) | 2000–3000 token,重疊 30s |
+
+猶豫就不用打——預設就是 A,它最通用,只是不會特別保護數字或程式碼。
+
+### `--mode`(選填,預設 auto)
+
+| mode | 行為 |
+|------|------|
+| **auto**(預設) | 依片長自動選:`< 600s`(10 分)走 quick,`>= 600s` 走 full |
+| **quick** | 單次呼叫:完整逐字稿 + super prompt 一次產文(TL;DR 3–6 條,opus)。快、省額度;長片會漏重點 |
+| **full** | map-reduce:M3 切分 → M5 分段筆記(sonnet,並發 2)→ M6 整合(opus,TL;DR 5–8 條)。慢、吃額度;資訊留存高 |
+
+何時該手動覆寫:**短片但資訊密**(講很快、乾貨多)→ `--mode full`;**長片但只想抓個大概** →
+`--mode quick`。長片走 quick 不會技術性失敗——實測 19min 影片的 quick prompt 才約 7k tokens
+(約 370 tokens/分鐘,3 小時的片也塞得下)——代價純粹是**品質**:單次呼叫要一口氣消化全片,
+論點留存率遠低於 map-reduce。省額度換留存率,自己權衡。
 
 ## 🔑 憑證(無 .env)
 
@@ -41,7 +70,7 @@ uv run yt-summary "https://youtu.be/VIDEO_ID" --type A
 
 ## 🧠 半年後最容易忘的事
 
-- quick/full 的分界是 **900 秒**(`config.yaml` 的 `quick_threshold_sec`),邊界值走 full。
+- quick/full 的分界是 **600 秒**(`config.yaml` 的 `quick_threshold_sec`),邊界值走 full。
 - vault 匯出是 pipeline **最後一步**且原子寫入(先 `.tmp-` 再 rename,成功後才清舊檔)——中途 Ctrl+C 不會污染 vault。
 - vault/raw 的檔案要等**隔天凌晨** ingest 才進 wiki;反悔窗內 `remove` 一刀清乾淨。
 - `--tools ""` 是刻意的:讓 claude -p 完全無工具(比 `--allowedTools ""` 更強)。

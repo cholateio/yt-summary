@@ -19,12 +19,13 @@ def decide_mode(duration_sec: int, mode_arg: str, threshold: int) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="yt-summary")
+    parser = argparse.ArgumentParser()  # prog 由 argv[0] 決定(yts / yt-summary 皆可)
     sub = parser.add_subparsers(dest="command", required=True)
 
     run = sub.add_parser("run", help="影片 → 重點文章")
     run.add_argument("url")
-    run.add_argument("--type", required=True, choices=["A", "B", "C"], dest="type_code")
+    run.add_argument("--type", default="A", choices=["A", "B", "C"], dest="type_code",
+                     help="A=AI/談話(預設) B=財經 C=coding")
     run.add_argument("--mode", default="auto", choices=["auto", "full", "quick"])
     run.add_argument("--no-vault", action="store_true")
     run.add_argument("--config", default="config.yaml")

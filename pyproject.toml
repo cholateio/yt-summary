@@ -10,7 +10,8 @@ dependencies = [
 ]
 
 [project.scripts]
-yt-summary = "yt_summary.cli:main"
+yts = "yt_summary.cli:main"
+yt-summary = "yt_summary.cli:main"  # 舊名保留(文件/肌肉記憶),與 yts 等價
 
 [dependency-groups]
 dev = ["pytest>=8"]

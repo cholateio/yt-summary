@@ -4,11 +4,17 @@ from yt_summary import cli, m1_fetch, m5_notes, m6_reduce, quick
 
 
 def test_decide_mode():
-    assert cli.decide_mode(600, "auto", 900) == "quick"
-    assert cli.decide_mode(1200, "auto", 900) == "full"
-    assert cli.decide_mode(900, "auto", 900) == "full"    # 邊界:>= threshold 走 full
-    assert cli.decide_mode(1200, "quick", 900) == "quick"  # 強制覆寫
-    assert cli.decide_mode(600, "full", 900) == "full"
+    assert cli.decide_mode(500, "auto", 600) == "quick"
+    assert cli.decide_mode(1200, "auto", 600) == "full"
+    assert cli.decide_mode(600, "auto", 600) == "full"    # 邊界:>= threshold 走 full
+    assert cli.decide_mode(1200, "quick", 600) == "quick"  # 強制覆寫
+    assert cli.decide_mode(500, "full", 600) == "full"
+
+
+def test_type_defaults_to_a():
+    args = cli.build_parser().parse_args(["run", "https://youtu.be/abcdefghijk"])
+    assert args.type_code == "A"
+    assert args.mode == "auto"
 
 
 CONFIG_TMPL = """\

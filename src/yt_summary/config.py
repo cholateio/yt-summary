@@ -40,7 +40,7 @@ def load_config(path: Path) -> Config:
         language_out=d.get("language_out", "zh-TW"),
         concurrency=int(d.get("concurrency", 2)),
         output_dir=Path(d.get("output_dir", "./output")),
-        quick_threshold_sec=int(raw.get("modes", {}).get("quick_threshold_sec", 900)),
+        quick_threshold_sec=int(raw.get("modes", {}).get("quick_threshold_sec", 600)),
         llm_models=dict(
             raw.get("llm", {}).get("models", {"m5": "sonnet", "m6": "opus", "quick": "opus"})
         ),

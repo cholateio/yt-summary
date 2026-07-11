@@ -4,7 +4,7 @@ defaults:
   output_dir: ./output
 
 modes:
-  quick_threshold_sec: 900  # < 15min 自動走 quick
+  quick_threshold_sec: 600  # < 10min 自動走 quick
 
 llm:
   backend: claude-cli

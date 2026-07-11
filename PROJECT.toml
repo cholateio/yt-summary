@@ -2,14 +2,15 @@
 # user-owned:kit 永不覆蓋。狀態/指令/付費服務改變時同步本檔,並更新 updated。
 
 name = "yt-summary"
-status = "active"          # active | mvp | done | paused | abandoned
-status_note = "v1 pipeline 完整可跑(M1-M8/quick/vault/remove,78 測試全過);近期在修 opencc 簡轉繁邊界 case,下一步視使用狀況決定是否擴充"
+status = "done"            # active | mvp | done | paused | abandoned
+status_note = "v1 完成:M1-M8/quick/vault/remove 全通,79 測試全過,實跑過 2 支影片,指令收斂為 `uv run yts <URL>`(type 預設 A、10min 以下走 quick);下一步無——純使用階段,除非用出不足才再開工(Whisper fallback / 畫格抽取列為 Phase 2,未排程)"
 updated = 2026-07-11       # 最後一次人工確認本檔內容的日期
 
 [commands]                 # key = 用途短名;value = 可直接複製執行的指令
-summary = "uv run yt-summary \"<youtube-url>\" --type A"
-summary_mode = "uv run yt-summary \"<youtube-url>\" --type A --mode full"
-remove = "uv run yt-summary remove <video-id-or-url>"
+summary = "uv run yts \"<youtube-url>\""                      # 預設 type A、mode auto
+summary_type = "uv run yts \"<youtube-url>\" --type B"       # 換 type:B=財經 C=coding
+summary_mode = "uv run yts \"<youtube-url>\" --mode full"    # 強制 map-reduce
+remove = "uv run yts remove <video-id-or-url>"
 
 # 每個付費/可能付費的外部服務一節 [[paid]];完全沒有就整段刪掉
 [[paid]]
