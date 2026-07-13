@@ -3,7 +3,7 @@
 
 name = "yt-summary"
 status = "done"            # active | mvp | done | paused | abandoned
-status_note = "v1 完成:M1-M8/quick/vault/remove 全通,79 測試全過,實跑過 2 支影片,指令收斂為 `uv run yts <URL>`(type 預設 A、10min 以下走 quick);下一步無——純使用階段,除非用出不足才再開工(Whisper fallback / 畫格抽取列為 Phase 2,未排程)"
+status_note = "v1 完成,79 測試全過,指令收斂為 `uv run yts <URL>`;無——純使用階段,除非用出不足才再開工"
 updated = 2026-07-11       # 最後一次人工確認本檔內容的日期
 
 [commands]                 # key = 用途短名;value = 可直接複製執行的指令
@@ -14,7 +14,7 @@ remove = "uv run yts remove <video-id-or-url>"
 
 # 每個付費/可能付費的外部服務一節 [[paid]];完全沒有就整段刪掉
 [[paid]]
-service = "Claude Code 訂閱(headless claude -p)" # 待確認:是否視為本專案專屬成本
+service = "Claude Code 訂閱"   # headless claude -p。待確認:是否視為本專案專屬成本
 billing = "月費"
 monthly_est = "?" # 訂閱與其他專案共用,非本專案增量成本;design D5 明訂選此路徑為求零邊際成本
 cancel = "取消 Claude Code 訂閱本專案即無法呼叫 LLM(llm.py 唯一入口 claude -p);不涉及額外 API key"
