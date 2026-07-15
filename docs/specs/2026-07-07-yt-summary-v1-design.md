@@ -28,6 +28,16 @@ M4 畫格擷取、Type C 視覺輸入、M6b 系列 synthesis、自動分類 type
 - 英文影片:`en` 會被選中,輸出仍是繁體中文摘要(英文專有名詞保留;opencc 對英文 no-op)。小限制:M2 斷句的句末標點集不含半形 `.`,英文只靠停頓/長度斷句,邊界較粗。
 - 日文影片:`ja` 不在優先序,純日文字幕會在 M1 `FetchError` 中止(乾淨失敗,不產爛物)。**這也是 opencc 的安全前提——日文進不到轉換層;若未來加 `ja` 支援,opencc 必須加來源語言防護(s2twp 會誤轉部分日文漢字)。**
 
+**選軌修正(實測記錄,2026-07-15)**:上面的字面優先序有個坑——英文影片的
+`automatic_captions` 含 YouTube 自動翻譯的 `zh-Hant` 軌,會被優先序在 `en` 之前選中;
+但翻譯字幕端點(`timedtext?...&tlang=`)被 YouTube 狠狠限流,實測原生 `en` 軌連打 6 發
+全過、`zh-Hant` 翻譯軌幾乎全 `HTTP 429`。修正:`pick_subtitle_lang` 改為「人工字幕 >
+影片原生語言(`meta['language']`)自動軌 > 翻譯自動軌(priority 序,最後手段)」——
+這正好讓實作符合上一條「英文影片 en 會被選中」的原意,且交給 LLM 翻譯品質優於機翻。
+殘留 429(某些片只有翻譯軌)由 `download_subtitle` 的 429 退避重試兜底(yt-dlp 自身
+`--retries` 不覆蓋字幕下載)。前置條件:需裝 `curl_cffi`,否則字幕端點因缺 impersonation
+一律 429(見 pyproject / LESSONS 2026-07-15)。
+
 ---
 
 ## 2. 架構
