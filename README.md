@@ -1,9 +1,9 @@
 # yt-summary
 
 > YouTube 影片轉重點文章(zh-TW)的個人 pipeline,文章自動落地個人知識庫
-> `vault/raw/`,由 vault 的 nightly ingest 蒸餾進 wiki。**私人 repo,這份
-> README 是寫給未來的我**——隔幾個月回來能 30 秒內重啟、想起這專案怎麼
-> 運作、以及怎麼叫 AI 接手。
+> `vault/raw/`,由 vault 的 nightly ingest 蒸餾進 wiki。**這份 README 是寫給
+> 未來的我**——隔幾個月回來能 30 秒內重啟、想起這專案怎麼運作、以及怎麼叫
+> AI 接手。
 >
 > Stack 一行:Python 3.12 · uv · yt-dlp · headless `claude -p`(訂閱內,無 API key)。
 
