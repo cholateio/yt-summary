@@ -3,14 +3,11 @@
 
 name = "yt-summary"
 status = "done"            # active | mvp | done | paused | abandoned
-status_note = "v1 使用中,100 測試全過,修好英文影片字幕 429(原生軌優先+退避重試);無主動待辦,yt-dlp JS runtime 棄用警告用出問題再處理"
-updated = 2026-07-16       # 最後一次人工確認本檔內容的日期
+status_note = "v1 使用中,測試全過;無主動待辦"
+updated = 2026-07-20       # 最後一次人工確認本檔內容的日期
 
 [commands]                 # key = 用途短名;value = 可直接複製執行的指令
-summary = "uv run yts \"<youtube-url>\""                      # 預設 type A、mode auto
-summary_type = "uv run yts \"<youtube-url>\" --type B"       # 換 type:B=財經 C=coding
-summary_mode = "uv run yts \"<youtube-url>\" --mode full"    # 強制 map-reduce
-remove = "uv run yts remove <video-id-or-url>"
+summary = "uv run yts \"<youtube-url>\""   # 其餘選項見 --help
 
 # 每個付費/可能付費的外部服務一節 [[paid]];完全沒有就整段刪掉
 [[paid]]
