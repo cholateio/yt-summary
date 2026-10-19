@@ -11,6 +11,9 @@ Thumbs.db
 
 # Secrets
 .env
+# Machine-local config overrides (e.g. config.local.yaml: vault.raw_dir)
+*.local.yaml
+*.local.yml
 .env.*
 !.env.example
 

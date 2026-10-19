@@ -122,7 +122,7 @@ yt-summary/
 
 ## 6. vault 匯出(vault.py)
 
-- 目標目錄:`/mnt/c/Users/micro/Documents/vault/raw/`(config 可改)。
+- 目標目錄:`~/Documents/vault/raw/`(示意;實際路徑設在 gitignored 的 config.local.yaml)。
 - 檔名:`yt-{YYYYMMDD}-{標題 slug}-{video_id}.md`(video_id 保證唯一;重跑同影片
   覆蓋自己先前那份——「raw 只進不改」是對 vault 整理助手的規則,不約束產生器更新自己的產物)。
 - 檔頭 metadata 區塊(嵌在文章 markdown 開頭):來源 URL、頻道、影片時長、type、
@@ -166,7 +166,7 @@ llm:
 
 vault:
   export: true
-  raw_dir: /mnt/c/Users/micro/Documents/vault/raw
+  raw_dir: ~/Documents/vault/raw
 # types: A/B/C 段落照 spec §9,惟 frames 相關欄位 v1 不讀取
 ```
 

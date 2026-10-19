@@ -41,7 +41,7 @@ YouTube 影片轉重點文章的個人 pipeline：長片走 map-reduce（M3→M5
 
 ## Project-specific constraints（禁區與硬規則）
 
-- `/mnt/c/Users/micro/Documents/vault/wiki/`：本專案絕不寫入——wiki 由 vault
+- vault 的 `wiki/`（`vault.raw_dir` 的手足目錄；raw_dir 設在 gitignored 的 `config.local.yaml`，見 config.yaml 註解）：本專案絕不寫入——wiki 由 vault
   自己的治理規則管理；程式與 AI 都只准 grep（remove 子指令僅列出受影響筆記）。
   程式僅寫 `vault/raw/`（原子寫入）。
 - 所有 LLM 呼叫必須走 `llm.call_llm`，不准各模組自行 subprocess claude。

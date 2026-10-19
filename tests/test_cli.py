@@ -175,3 +175,31 @@ def test_remove_subcommand(tmp_path, monkeypatch, capsys):
     assert not (out / "abcdefghijk").exists()
     assert list(raw.glob("*.md")) == []
     assert "已完全移除" in capsys.readouterr().out
+
+
+def test_unset_raw_dir_skips_export_and_remove_refuses(tmp_path, monkeypatch, capsys):
+    cfg, out, raw = _write_config(tmp_path)
+    cfg.write_text(cfg.read_text(encoding="utf-8").replace(
+        f"vault: {{ export: true, raw_dir: {raw} }}", "vault: { export: true }"),
+        encoding="utf-8")
+    cwd = tmp_path / "cwd"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    monkeypatch.setattr(m1_fetch, "fetch_meta", lambda url, run=None: META)
+
+    def fake_download(url, lang, source, workdir, run=None):
+        p = workdir / "abcdefghijk.zh-TW.json3"
+        p.write_text(json.dumps(JSON3), encoding="utf-8")
+        return p
+
+    monkeypatch.setattr(m1_fetch, "download_subtitle", fake_download)
+    monkeypatch.setattr(quick, "quick_summarize",
+                        lambda transcript, t, m, call=None: ("# 文章", []))
+
+    assert cli.main(["https://youtu.be/abcdefghijk", "--config", str(cfg)]) == 0
+    assert "vault.raw_dir 未設定" in capsys.readouterr().err
+    assert list(cwd.iterdir()) == []                 # never falls back to cwd
+    assert list(raw.iterdir()) == []
+
+    assert cli.main(["remove", "abcdefghijk", "--config", str(cfg)]) == 2
+    assert (out / "abcdefghijk").exists()            # nothing removed

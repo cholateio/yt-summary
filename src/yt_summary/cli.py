@@ -130,7 +130,10 @@ def cmd_run(args, reporter: Reporter | None = None) -> int:
     write_outputs(outdir, transcript=transcript, segments=segments,
                   notes=notes, article=article, runlog=runlog)
 
-    if cfg.vault_export and not args.no_vault:
+    if cfg.vault_export and not args.no_vault and cfg.vault_raw_dir is None:
+        print("警告:vault.raw_dir 未設定(見 config.local.yaml),已跳過 vault 匯出",
+              file=sys.stderr)
+    elif cfg.vault_export and not args.no_vault:
         try:
             p = vault.export_article(article, transcript, cfg.vault_raw_dir, args.type_code)
             print(f"已匯出 vault:{p}")
@@ -144,6 +147,9 @@ def cmd_run(args, reporter: Reporter | None = None) -> int:
 
 def cmd_remove(args) -> int:
     cfg = load_config(Path(args.config))
+    if cfg.vault_raw_dir is None:
+        print("錯誤:vault.raw_dir 未設定(見 config.local.yaml)", file=sys.stderr)
+        return 2
     wiki_dir = cfg.vault_raw_dir.parent / "wiki"
     report = vault.remove(args.target, cfg.output_dir, cfg.vault_raw_dir, wiki_dir)
     print(f"video_id:{report.video_id}")

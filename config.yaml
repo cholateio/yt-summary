@@ -12,7 +12,11 @@ llm:
 
 vault:
   export: true
-  raw_dir: /mnt/c/Users/micro/Documents/vault/raw
+  # raw_dir is machine-specific: set it in config.local.yaml (gitignored,
+  # deep-merged over this file), e.g.
+  #   vault:
+  #     raw_dir: ~/Documents/vault/raw
+  # Unset = vault export is skipped with a warning.
 
 types:
   A: { segment_tokens: [3000, 4000], overlap_sec: 45 }
