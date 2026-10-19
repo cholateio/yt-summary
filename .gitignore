@@ -11,11 +11,12 @@ Thumbs.db
 
 # Secrets
 .env
+.env.*
+!.env.example
+
 # Machine-local config overrides (e.g. config.local.yaml: vault.raw_dir)
 *.local.yaml
 *.local.yml
-.env.*
-!.env.example
 
 # 常見依賴/build 產物
 node_modules/
