@@ -33,3 +33,14 @@ output/
 
 # Claude Code machine-local overrides (kit files themselves are tracked)
 .claude/settings.local.json
+
+# --- Local-only dev artifacts (same block in every repo, public or private) ---
+# Agent harness state and per-machine settings
+.claude/
+CLAUDE.local.md
+# Personal project manifest and lessons log: never committed
+PROJECT.toml
+docs/LESSONS.md
+# AI implementation plans: scratch, deleted when done
+docs/plans/
+docs/superpowers/plans/
