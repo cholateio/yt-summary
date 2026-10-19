@@ -31,16 +31,31 @@ output/
 *.log
 *:Zone.Identifier
 
-# Claude Code machine-local overrides (kit files themselves are tracked)
-.claude/settings.local.json
-
-# --- Local-only dev artifacts (same block in every repo, public or private) ---
-# Agent harness state and per-machine settings
+# >>> kit v5 (managed block — edit outside the markers) >>>
 .claude/
+.codex/
+.superpowers/
 CLAUDE.local.md
-# Personal project manifest and lessons log: never committed
 PROJECT.toml
 docs/LESSONS.md
-# AI implementation plans: scratch, deleted when done
 docs/plans/
 docs/superpowers/plans/
+docs/decisions/
+*.local.toml
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+!.env.dist
+!.env.defaults
+!.env.*.example
+!.env.*.sample
+!.env.*.template
+!.env.*.dist
+!.env.*.defaults
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+# <<< kit v5 <<<
