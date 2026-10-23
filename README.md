@@ -1,5 +1,7 @@
 # yt-summary
 
+**English** | [繁體中文](README.zh-TW.md)
+
 You find a long YouTube talk or tutorial you would rather read than watch. Run one command with its URL and get a structured article in Traditional Chinese, with a TL;DR, timestamped sections and an appendix, saved as Markdown and optionally dropped into your own notes folder.
 
 ```markdown

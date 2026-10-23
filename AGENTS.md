@@ -51,6 +51,7 @@ YouTube 影片轉重點文章的個人 pipeline：長片走 map-reduce（M3→M5
 
 - Conventional commits（`type(scope): 摘要`）；commit 前跑 `uv run pytest -q`。
 - 本機路徑（vault 位置等）只放 gitignored 的 `config.local.yaml`，tracked 的 `config.yaml` 只放預設與註解。
+- `README.md`（英文）與 `README.zh-TW.md`（繁中）互為對照版本，改其中一份就要在同一個 commit 同步更新另一份。
 - GitHub Actions: top-level `permissions: contents: read`, raised per job only when needed.
 - GitHub Actions: pin every `uses:` to a 40-character commit SHA with a trailing `# vX.Y.Z` comment.
 
