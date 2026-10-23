@@ -1,8 +1,8 @@
 # yt-summary
 
-**English** | [繁體中文](README.zh-TW.md)
+**繁體中文** | [English](README.en.md)
 
-You find a long YouTube talk or tutorial you would rather read than watch. Run one command with its URL and get a structured article in Traditional Chinese, with a TL;DR, timestamped sections and an appendix, saved as Markdown and optionally dropped into your own notes folder.
+找到一支很長的 YouTube 演講或教學，比起看完，你寧可用讀的。帶著網址跑一行指令，就會得到一篇結構化的繁體中文文章，有 TL;DR、標上時間戳的段落和附錄，存成 Markdown，也可以順便放進你自己的筆記資料夾。
 
 ```markdown
 # 從 Vibe Coding 到 Agentic Engineering:Google Agentic Engineering 課程 Day 1 精華
@@ -18,12 +18,12 @@ You find a long YouTube talk or tutorial you would rather read than watch. Run o
 ## 附錄
 ```
 
-- **Three video types**: `--type A` (talks, the default) keeps the speaker's chain of reasoning, `B` (finance) copies numbers, dates and tickers verbatim and appends a table of figures with timestamps, and `C` (coding) keeps code, file names and commands verbatim and appends the code blocks.
-- **Two depths**: videos under 10 minutes are written in one Claude call; longer ones are cut into overlapping segments, noted two at a time by Sonnet, and merged into one article by Opus. `--mode quick` or `--mode full` overrides the choice.
-- **Subtitles, not audio**: the transcript comes from the video's own subtitles, human-made Chinese or English first, then the auto-generated track in the spoken language, and the result is converted to Taiwan Traditional Chinese with OpenCC, leaving code blocks untouched.
-- **Notes-folder export**: the article is also written atomically into a folder you choose, with the source URL, channel and length in its header, and `yts remove <id>` deletes it again.
+- **三種影片類型**：`--type A`（演講，預設）保留講者的推論脈絡；`B`（財經）原樣照抄數字、日期和股票代號，並在文末附上標有時間戳的數字一覽表；`C`（程式）原樣保留程式碼、檔名和指令，並在文末附上程式碼區塊。
+- **兩種深度**：10 分鐘以下的影片用一次 Claude 呼叫寫完；較長的影片會切成彼此重疊的片段，由 Sonnet 每次兩段地做筆記，再由 Opus 合併成一篇文章。可以用 `--mode quick` 或 `--mode full` 強制指定。
+- **用字幕，不聽音訊**：逐字稿取自影片本身的字幕，優先用人工製作的中文或英文字幕，其次是影片語言的自動產生字幕；結果再用 OpenCC 轉成台灣繁體中文，程式碼區塊不會被動到。
+- **匯出到筆記資料夾**：文章也會以原子寫入的方式存進你指定的資料夾，開頭附上來源網址、頻道和影片長度；`yts remove <id>` 可以再把它刪掉。
 
-Input and output for one run:
+一次執行的輸入與輸出：
 
 ```
 uv run yts "https://youtu.be/<video-id>" --type B
@@ -35,42 +35,42 @@ output/<video-id>/
 <your notes folder>/yt-<date>-<title>-<video-id>.md
 ```
 
-A video with no subtitles at all fails; there is no speech-to-text fallback.
+完全沒有字幕的影片會直接失敗，沒有語音轉文字的備案。
 
-## How it works
+## 它怎麼運作
 
 ```
-YouTube URL ──► yt-dlp: metadata + subtitles ──► cleaned, timestamped sentences
-                                                          │
-          under 10 min: one call    10 min or more: segment notes ──► merge
-                                                          │
-         claude -p (no tools) ──► Markdown ──► output/<id>/ + your notes folder
+YouTube URL ──► yt-dlp：影片資訊 + 字幕 ──► 清理過、附時間戳的句子
+                                                │
+     不到 10 分鐘：一次呼叫    10 分鐘以上：分段筆記 ──► 合併
+                                                │
+    claude -p（不開工具） ──► Markdown ──► output/<id>/ + 你的筆記資料夾
 ```
 
-There is no API key and no server. Every model call goes through your own signed-in Claude Code CLI.
+不需要 API key，也沒有伺服器。每一次模型呼叫都透過你自己已登入的 Claude Code CLI。
 
-## Install
+## 安裝
 
-You need Python 3.12 or newer, [uv](https://docs.astral.sh/uv/), and [Claude Code](https://claude.com/claude-code) signed in to your account. Each run uses your Claude usage.
+需要：Python 3.12 以上、[uv](https://docs.astral.sh/uv/)，以及登入你帳號的 [Claude Code](https://claude.com/claude-code)。每次執行都會用到你的 Claude 用量。
 
-1. Clone the repo and run `uv sync`.
-2. Run `claude` once and sign in, if you have not already.
-3. Optional: to export into a notes folder, create `config.local.yaml` next to `config.yaml`. Without it, articles stay in `output/` and the run prints a warning.
+1. Clone 本 repo，執行 `uv sync`。
+2. 如果還沒登入過，先執行一次 `claude` 並登入。
+3. 選用：要匯出到筆記資料夾，就在 `config.yaml` 旁邊建立 `config.local.yaml`。沒有這個檔案的話，文章只會留在 `output/`，執行時也會印出警告。
    ```yaml
    vault:
      raw_dir: ~/notes/raw
    ```
-4. Run `uv run yts "<youtube-url>"`, adding `--type B` or `--type C` for finance or coding videos.
+4. 執行 `uv run yts "<youtube-url>"`；財經或程式影片再加上 `--type B` 或 `--type C`。
 
-`yts remove` needs the notes folder from step 3. It also lists notes in a `wiki` folder beside it whose `source:` line points at the video, without changing them.
+`yts remove` 需要第 3 步設定的筆記資料夾。它也會列出旁邊 `wiki` 資料夾裡 `source:` 那一行指向這支影片的筆記，但不會修改它們。
 
-## Privacy & security
+## 隱私與安全
 
-- The transcript and prompts are sent to Anthropic through your Claude Code CLI. yt-dlp's requests to YouTube are the only other traffic.
-- Claude runs with every tool disabled (`--tools ""`), so it can only return text. It cannot read your files, run commands or browse.
-- The tool stores no keys. Sign-in is handled by Claude Code.
-- Output stays on your machine: `output/` is gitignored, and the export only writes inside the folder you configure.
+- 逐字稿和 prompt 會透過你的 Claude Code CLI 送到 Anthropic。除此之外，唯一的對外連線是 yt-dlp 對 YouTube 的請求。
+- Claude 執行時所有工具都被停用（`--tools ""`），所以它只能回傳文字，無法讀取你的檔案、執行指令或上網。
+- 這個工具不儲存任何 key，登入由 Claude Code 處理。
+- 產出只留在你的電腦上：`output/` 已被 gitignore，匯出也只會寫進你設定的資料夾裡。
 
-## License
+## 授權
 
-[MIT](LICENSE).
+[MIT](LICENSE)。
